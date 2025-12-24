@@ -1,18 +1,20 @@
-name: deploy
+name: build
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
+  workflow_dispatch:
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
-      - name: Write env for production
+          node-version: '20'
+          cache: 'npm'
+      - name: Create .env.production
         env:
           VITE_TEABLE_BASE_URL: ${{ secrets.VITE_TEABLE_BASE_URL }}
           VITE_TEABLE_API_TOKEN: ${{ secrets.VITE_TEABLE_API_TOKEN }}
@@ -37,26 +39,14 @@ jobs:
           VITE_TAL_MLOPS_APP_KEY=\${VITE_TAL_MLOPS_APP_KEY}
           VITE_TAL_AI_BASE_URL=\${VITE_TAL_AI_BASE_URL}
           EOF
-      - run: npm ci
-      - run: npm run test:unit
-      - run: npm run build
-      - name: Upload dist to server
-        uses: appleboy/scp-action@v0.1.7
+      - name: Install
+        run: npm ci
+      - name: Lint and Test
+        run: npm run test:ci
+      - name: Build
+        run: npm run build
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          source: "dist/*"
-          target: "/var/www/airace2"
-          strip_components: 1
-          overwrite: true
-      - name: Reload nginx
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            sudo systemctl reload nginx
+          name: dist
+          path: dist

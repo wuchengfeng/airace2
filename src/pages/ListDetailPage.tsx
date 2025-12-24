@@ -33,6 +33,7 @@ export function ListDetailPage() {
     | { kind: 'error'; message: string }
   >(() => {
     if (!teableEnv || !teableEnv.wordListsTableId) return { kind: 'unconfigured' }
+    if (listId && listId.startsWith('rec')) return { kind: 'loading' }
     return { kind: 'idle' }
   })
   const [showDebug, setShowDebug] = useState(false)
@@ -55,7 +56,6 @@ export function ListDetailPage() {
   useEffect(() => {
     if (!listId) return
     if (!teableEnv || !teableEnv.wordListsTableId || !listId.startsWith('rec')) return
-    setTeableStatus({ kind: 'loading' })
     let cancelled = false
     fetchTeableWords(teableEnv, listId)
       .then((remoteItems) => {

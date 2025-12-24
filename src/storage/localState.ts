@@ -384,7 +384,9 @@ export async function fetchTeableWords(env: TeableEnv, wordTableId: string): Pro
       })
       console.debug('[Teable] WordLists raw sample:', sample)
       console.debug('[Teable] Parsed items for wordTableId', wordTableId, '=>', out.length)
-    } catch {}
+    } catch (e) {
+      console.debug('[Teable] WordLists sample debug parse error', e)
+    }
   }
 
   out.sort((a, b) => b.createdAt - a.createdAt)
@@ -423,7 +425,7 @@ async function fetchAllTeableRecords(env: TeableEnv, path: string): Promise<Reco
   const out: Record<string, unknown>[] = []
 
   // Phase 1: Prefer official pagination params 'take' and 'skip'
-  let take = 1000
+  const take = 1000
   let skip = 0
   let guard = 0
   let lastFirstId: string | null = null
@@ -558,7 +560,7 @@ export async function createTeableWords(
   const records = (data as { records?: unknown }).records
   if (!Array.isArray(records)) throw new Error('Teable batch create failed: records not array')
 
-  return records.map((r: any, i: number) => {
+  return records.map((r: Record<string, unknown>, i: number) => {
     const id = typeof r.id === 'string' ? r.id : crypto.randomUUID()
     const createdTimeStr = typeof r.createdTime === 'string' ? r.createdTime : undefined
     const createdTime = createdTimeStr ? Date.parse(createdTimeStr) : Date.now()

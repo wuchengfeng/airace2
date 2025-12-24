@@ -3,7 +3,7 @@ import { createEmptyState, ensurePracticeOrder } from '../../storage/localState'
 
 describe('practice ensure order', () => {
   test('reshuffle: true resets progress', () => {
-    let s = createEmptyState()
+    const s = createEmptyState()
     const listId = 'L1'
     s.itemsByListId[listId] = [
       { id: '1', term: 'a', createdAt: 0 },
@@ -26,7 +26,7 @@ describe('practice ensure order', () => {
   })
 
   test('fixed_sequence updates order when items change', () => {
-    let s = createEmptyState()
+    const s = createEmptyState()
     const listId = 'L1'
     // Old state: items 1, 2
     s.itemsByListId[listId] = [
