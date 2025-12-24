@@ -68,17 +68,13 @@ function parseJson<T>(text: string): T {
 async function chatCompletion(messages: ChatMessage[]) {
   const appId = getEnv('VITE_TAL_MLOPS_APP_ID')
   const appKey = getEnv('VITE_TAL_MLOPS_APP_KEY')
-  if (!appId || !appKey) {
-    throw new Error('Missing env: VITE_TAL_MLOPS_APP_ID / VITE_TAL_MLOPS_APP_KEY')
-  }
-
-  const url = getEnv('VITE_TAL_AI_BASE_URL') ?? 'http://ai-service.tal.com/openai-compatible/v1/chat/completions'
+  const url = getEnv('VITE_TAL_AI_BASE_URL') ?? '/tal-ai/openai-compatible/v1/chat/completions'
   const model = getEnv('VITE_TAL_AI_MODEL') ?? 'gpt-4.1'
 
   const res = await fetch(url, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${appId}:${appKey}`,
+      ...(appId && appKey ? { Authorization: `Bearer ${appId}:${appKey}` } : {}),
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({

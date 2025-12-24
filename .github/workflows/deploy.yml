@@ -12,6 +12,11 @@ jobs:
         with:
           node-version: 20
           cache: npm
+      - name: Write env for production
+        run: |
+          cat > .env.production << 'EOF'
+          VITE_TEABLE_BASE_URL=/teable
+          EOF
       - run: npm ci
       - run: npm run test:unit
       - run: npm run build

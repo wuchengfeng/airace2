@@ -208,14 +208,14 @@ export function getTeableEnv(): TeableEnv | null {
   const wordListsTableId = import.meta.env.VITE_TEABLE_WORDLISTS_TABLE_ID ?? import.meta.env.VITE_TEABLE_WORDLIST_TABLE_ID
   const baseUrlRaw = import.meta.env.VITE_TEABLE_BASE_URL
 
-  if (typeof apiToken !== 'string' || apiToken.trim().length === 0) return null
+  const token = typeof apiToken === 'string' && apiToken.trim().length > 0 ? apiToken.trim() : ''
 
   const baseUrl =
     typeof baseUrlRaw === 'string' && baseUrlRaw.trim().length > 0 ? baseUrlRaw.trim() : 'https://yach-teable.zhiyinlou.com'
 
   return {
     baseUrl: baseUrl.replace(/\/+$/g, ''),
-    apiToken: apiToken.trim(),
+    apiToken: token,
     wordTableTableId: typeof wordTableTableId === 'string' && wordTableTableId.trim().length > 0 ? wordTableTableId.trim() : undefined,
     wordListsTableId: typeof wordListsTableId === 'string' && wordListsTableId.trim().length > 0 ? wordListsTableId.trim() : undefined,
   }
@@ -227,7 +227,7 @@ async function teableJson<T>(env: TeableEnv, input: string, init?: RequestInit):
     ...init,
     headers: {
       Accept: 'application/json',
-      Authorization: `Bearer ${env.apiToken}`,
+      ...(env.apiToken ? { Authorization: `Bearer ${env.apiToken}` } : {}),
       ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
       ...(init?.headers ?? {}),
     },
