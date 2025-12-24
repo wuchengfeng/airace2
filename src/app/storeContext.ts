@@ -58,6 +58,7 @@ export type Action =
     }
   | { type: 'settings/mode'; payload: { mode: PracticeMode } }
   | { type: 'settings/selectedList'; payload: { selectedListId?: string } }
+  | { type: 'settings/aiProvider'; payload: { aiProvider?: 'tal' | 'volces' } }
   | { type: 'items/material'; payload: { listId: string; itemId: string; material: ListItemMaterial } }
   | { type: 'mistakes/record'; payload: { entry: Omit<MistakeEntry, 'wrongCount' | 'lastWrongAt'> } }
   | { type: 'mistakes/clear' }
@@ -219,6 +220,10 @@ export function reducer(state: AppStateV1, action: Action): AppStateV1 {
     }
     case 'settings/selectedList': {
       next.settings = { ...(next.settings ?? { mode: 'fixed_sequence' }), selectedListId: action.payload.selectedListId }
+      return next
+    }
+    case 'settings/aiProvider': {
+      next.settings = { ...(next.settings ?? { mode: 'fixed_sequence' }), aiProvider: action.payload.aiProvider }
       return next
     }
     case 'items/material': {

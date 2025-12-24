@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAppActions, useAppState } from '../app/storeHooks'
-import { aiProvider } from '../ai/provider'
+import { aiProvider as defaultAiProvider, userAiProvider } from '../ai/provider'
+import { volcesAiProvider } from '../ai/volcesProvider'
 import type { JudgeMeaningOutput } from '../ai/types'
 import { getCurrentItemId } from '../storage/localState'
 import { HighlightText } from '../lib/highlight'
@@ -188,6 +189,15 @@ export function PracticePage() {
   const actions = useAppActions()
   const nav = useNavigate()
 
+  const settings = state.settings ?? { mode: 'fixed_sequence' as const }
+  const selectedProvider = settings.aiProvider
+  const ai =
+    selectedProvider === 'volces'
+      ? volcesAiProvider
+      : selectedProvider === 'tal'
+        ? userAiProvider
+        : defaultAiProvider
+
   const list = state.lists.find((l) => l.id === listId)
   const items = (listId ? state.itemsByListId[listId] : []) ?? []
   const progress = (listId ? state.practiceByListId[listId] : undefined) ?? undefined
@@ -245,7 +255,7 @@ export function PracticePage() {
       try {
         if (!sentence) {
           setGeneratingStep('正在生成例句...')
-          const out = await aiProvider.generateSentence({ term: currentItem.term, prompts })
+          const out = await ai.generateSentence({ term: currentItem.term, prompts })
           if (cancelled) return
           setGeneratingStep(null)
           const materialBase = runMatch ? currentItem.material ?? {} : {}
@@ -259,7 +269,7 @@ export function PracticePage() {
         }
         if (!sentenceZh) {
           setGeneratingStep('正在生成例句翻译...')
-          const out = await aiProvider.translateSentenceZh({ term: currentItem.term, sentence, prompts })
+          const out = await ai.translateSentenceZh({ term: currentItem.term, sentence, prompts })
           if (cancelled) return
           setGeneratingStep(null)
           const materialBase = runMatch ? currentItem.material ?? {} : {}
@@ -288,7 +298,36 @@ export function PracticePage() {
     return () => {
       cancelled = true
     }
-  }, [actions, currentItem, listId, state.aiPrompts, progress?.run?.id])
+  }, [actions, currentItem, listId, state.aiPrompts, progress?.run?.id, selectedProvider, ai])
+
+  const onSubmitRef = useRef<(() => void) | null>(null)
+  useEffect(() => {
+    onSubmitRef.current = () => {
+      void onSubmit()
+    }
+  }, [onSubmit])
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Enter') return
+      if (e.isComposing) return
+      if (e.shiftKey || e.ctrlKey || e.metaKey) return
+      e.preventDefault()
+      const orderLen = progress?.order.length ?? items.length
+      const index = progress && currentItemId ? Math.max(0, progress.order.findIndex((id) => id === currentItemId)) : 0
+      const last = index + 1 >= orderLen
+      if (finalLocked || correctLocked) {
+        if (listId) {
+          actions.nextPractice(listId)
+          if (last) nav(`/app/practice/${listId}/result`, { replace: true })
+        }
+        return
+      }
+      if (!isSubmitting && userMeaningZh.trim().length > 0) onSubmitRef.current?.()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [finalLocked, correctLocked, isSubmitting, userMeaningZh, actions, listId, nav, ai, progress, progress?.order.length, items.length, currentItemId])
 
   if (!listId || !list) {
     return (
@@ -372,6 +411,7 @@ export function PracticePage() {
 
   const speechAvailable = canUseSpeechRecognition()
 
+
   async function onSubmit() {
     if (isSubmitting || finalLocked) return
     const meaning = userMeaningZh.trim()
@@ -385,7 +425,7 @@ export function PracticePage() {
       let ensuredSentence = (materialBase.sentence ?? sentence ?? '').trim()
       if (!ensuredSentence) {
         setGeneratingStep('正在生成例句...')
-        const out = await aiProvider.generateSentence({ term: item.term, prompts })
+        const out = await ai.generateSentence({ term: item.term, prompts })
         ensuredSentence = out.sentence.trim()
         setGeneratingStep(null)
         actions.setItemMaterial(safeListId, item.id, {
@@ -396,7 +436,7 @@ export function PracticePage() {
         })
       }
       setGeneratingStep('正在评测...')
-      const judge = await aiProvider.judgeMeaning({
+      const judge = await ai.judgeMeaning({
         term: item.term,
         sentence: ensuredSentence,
         prompts,
@@ -435,7 +475,7 @@ export function PracticePage() {
         // Force regeneration if context is missing OR if the new contextZh field is missing (legacy data)
         if (!context || !context.contextZh) {
           setGeneratingStep('正在生成上下文...')
-          const generated = await aiProvider.generateContext({ term: item.term, sentence: ensuredSentence, prompts })
+          const generated = await ai.generateContext({ term: item.term, sentence: ensuredSentence, prompts })
           setGeneratingStep(null)
           actions.setItemMaterial(safeListId, item.id, {
             ...materialBase,
@@ -465,7 +505,7 @@ export function PracticePage() {
 
         if (!isValid) {
           setGeneratingStep('正在生成短文...')
-          const generated = await aiProvider.generateArticle({
+          const generated = await ai.generateArticle({
             term: item.term,
             sentence: ensuredSentence,
             prevSentence: context?.prevSentence,
@@ -493,7 +533,7 @@ export function PracticePage() {
 
       if (!isValidArticle) {
         setGeneratingStep('正在生成短文...')
-        const generated = await aiProvider.generateArticle({
+        const generated = await ai.generateArticle({
           term: item.term,
           sentence: ensuredSentence,
           prevSentence: context?.prevSentence,
@@ -512,7 +552,7 @@ export function PracticePage() {
       let finalUpdated = false
       if (!resolvedFinal) {
         setGeneratingStep('正在生成最终解释...')
-        const generated = await aiProvider.finalReveal({
+        const generated = await ai.finalReveal({
           term: item.term,
           sentence: ensuredSentence,
           articleEn: finalInputArticle.articleEn,
@@ -628,24 +668,7 @@ export function PracticePage() {
 
   const isLast = idx + 1 >= total
   
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key !== 'Enter') return
-      if (e.isComposing) return
-      if (e.shiftKey || e.ctrlKey || e.metaKey) return
-      e.preventDefault()
-      if (finalLocked || correctLocked) {
-        actions.nextPractice(safeListId)
-        if (isLast) nav(`/app/practice/${safeListId}/result`, { replace: true })
-        return
-      }
-      if (!isSubmitting && userMeaningZh.trim().length > 0) {
-        void onSubmit()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [finalLocked, correctLocked, isSubmitting, userMeaningZh, actions, safeListId, isLast, nav, onSubmit])
+  
 
   return (
     <div className="space-y-4">

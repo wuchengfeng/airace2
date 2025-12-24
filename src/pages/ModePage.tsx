@@ -20,6 +20,7 @@ export function ModePage() {
   const settings = state.settings ?? { mode: 'fixed_sequence' as const }
   const selectedMode = settings.mode
   const selectedListId = settings.selectedListId
+  const selectedAiProvider = settings.aiProvider ?? 'tal'
 
   const itemsCountByListId = useMemo(() => {
     const out: Record<string, number> = {}
@@ -134,6 +135,35 @@ export function ModePage() {
         )}
       </div>
 
+      <div className="space-y-3">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold text-white">选择模型</div>
+            <div className="mt-1 text-sm text-white/60">切换不同的大模型调用方式</div>
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {(['tal', 'volces'] as const).map((p) => {
+            const active = selectedAiProvider === p
+            return (
+              <button
+                key={p}
+                type="button"
+                onClick={() => actions.setAiProvider(p)}
+                className={cn(
+                  'text-left',
+                  'rounded-2xl border bg-white/5 p-4 ring-1 transition-all',
+                  active ? 'border-white/20 ring-white/20' : 'border-white/10 ring-white/10 hover:bg-white/10',
+                )}
+              >
+                <div className="text-xs font-semibold tracking-wide text-white/60">模型</div>
+                <div className="mt-2 text-sm font-semibold text-white">{p === 'tal' ? 'Tal AI（内网）' : 'Volces Ark（公网）'}</div>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
       <Card className="flex flex-wrap items-center justify-between gap-3 p-5">
         <div className="min-w-0">
           <div className="text-sm font-semibold text-white">开始练习</div>
@@ -158,4 +188,3 @@ export function ModePage() {
     </div>
   )
 }
-

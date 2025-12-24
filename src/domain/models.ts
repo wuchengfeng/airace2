@@ -112,6 +112,7 @@ export type PracticeHistoryEntry = PracticeRun & {
 export type UserSettings = {
   mode: PracticeMode
   selectedListId?: string
+  aiProvider?: 'tal' | 'volces'
 }
 
 export type AppStateV1 = {

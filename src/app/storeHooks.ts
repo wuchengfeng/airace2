@@ -266,6 +266,10 @@ export function useAppActions() {
     (selectedListId?: string) => dispatch({ type: 'settings/selectedList', payload: { selectedListId } }),
     [dispatch],
   )
+  const setAiProvider = useCallback(
+    (aiProvider?: 'tal' | 'volces') => dispatch({ type: 'settings/aiProvider', payload: { aiProvider } }),
+    [dispatch],
+  )
   const setPromptTemplate = useCallback(
     (key: string, template: PromptTemplate) => dispatch({ type: 'prompts/set', payload: { key, template } }),
     [dispatch],
@@ -363,6 +367,7 @@ export function useAppActions() {
       startMistakesReview,
       setUserMode,
       setSelectedListId,
+      setAiProvider,
       setPromptTemplate,
     }),
     [
@@ -372,6 +377,8 @@ export function useAppActions() {
       createList,
       deleteItem,
       deleteList,
+      deleteHistoryRun,
+      deletePracticeSession,
       ensurePractice,
       markPracticeCorrect,
       markPracticeFinalWrong,
@@ -383,6 +390,7 @@ export function useAppActions() {
       setPromptTemplate,
       setSelectedListId,
       setUserMode,
+      setAiProvider,
       syncItemsFromTeable,
       upsertItem,
       startCorrectsReview,
