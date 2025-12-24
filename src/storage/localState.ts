@@ -127,6 +127,14 @@ export function loadState(): AppStateV1 {
         settings: {
           mode: mode ?? 'fixed_sequence',
           selectedListId: typeof settings.selectedListId === 'string' ? settings.selectedListId : undefined,
+          aiProvider:
+            settings.aiProvider === 'tal' || settings.aiProvider === 'volces'
+              ? (settings.aiProvider as 'tal' | 'volces')
+              : (typeof import.meta.env.VITE_AI_PROVIDER === 'string' && import.meta.env.VITE_AI_PROVIDER.toLowerCase() === 'volces'
+                  ? 'volces'
+                  : typeof import.meta.env.VITE_AI_PROVIDER === 'string' && import.meta.env.VITE_AI_PROVIDER.toLowerCase() === 'user'
+                    ? 'tal'
+                    : undefined),
         },
         aiPrompts: upgradedPrompts,
       }
