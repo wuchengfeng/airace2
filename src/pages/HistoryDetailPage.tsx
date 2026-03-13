@@ -10,6 +10,7 @@ const modeLabel: Record<PracticeMode, string> = {
   fixed_sequence: '固定词表序列模式',
   ai_infinite: 'AI 无限词模式',
   fixed_random: '固定词表随机模式',
+  fixed_random_unpracticed: '随机未练过（10）',
 }
 
 function formatDurationMs(ms: number) {
@@ -54,6 +55,9 @@ export function HistoryDetailPage() {
   const correctTotal = correct1 + correct2 + correct3
   const finalWrong = entry.finalWrongCount
   const acc = entry.total > 0 ? Math.round((correctTotal / entry.total) * 100) : 0
+  const rate1 = entry.total > 0 ? Math.round((correct1 / entry.total) * 100) : 0
+  const rate2 = entry.total > 0 ? Math.round((correct2 / entry.total) * 100) : 0
+  const rate3 = entry.total > 0 ? Math.round((correct3 / entry.total) * 100) : 0
   const duration =
     typeof entry.endedAt === 'number' && typeof entry.startedAt === 'number'
       ? formatDurationMs(entry.endedAt - entry.startedAt)
@@ -77,6 +81,12 @@ export function HistoryDetailPage() {
           <div className="rounded-2xl bg-white/10 px-4 py-3 text-center ring-1 ring-white/10">
             <div className="text-xs font-semibold tracking-wide text-white/60">正确率</div>
             <div className="mt-1 text-3xl font-semibold tracking-tight text-white">{acc}%</div>
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+              <div className="rounded px-2 py-1 text-[11px] text-white/80 ring-1 ring-white/15">一猜 {rate1}%</div>
+              <div className="rounded px-2 py-1 text-[11px] text-white/80 ring-1 ring-white/15">二猜 {rate2}%</div>
+              <div className="rounded px-2 py-1 text-[11px] text-white/80 ring-1 ring-white/15">三猜 {rate3}%</div>
+              <div className="rounded px-2 py-1 text-[11px] text-white/80 ring-1 ring-white/15">猜对 {acc}%</div>
+            </div>
           </div>
         </div>
       </Card>
@@ -105,6 +115,20 @@ export function HistoryDetailPage() {
             <div className="flex items-center justify-between text-sm text-white/75">
               <span>阶段 4 仍猜错（入错题本）</span>
               <span className="font-semibold text-white">{finalWrong}</span>
+            </div>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="rounded-xl bg-white/5 p-2 text-center text-xs text-white/70 ring-1 ring-white/10">
+              一猜正确率 <span className="ml-1 font-semibold text-white">{rate1}%</span>
+            </div>
+            <div className="rounded-xl bg-white/5 p-2 text-center text-xs text-white/70 ring-1 ring-white/10">
+              二猜正确率 <span className="ml-1 font-semibold text-white">{rate2}%</span>
+            </div>
+            <div className="rounded-xl bg-white/5 p-2 text-center text-xs text-white/70 ring-1 ring-white/10">
+              三猜正确率 <span className="ml-1 font-semibold text-white">{rate3}%</span>
+            </div>
+            <div className="rounded-xl bg-white/5 p-2 text-center text-xs text-white/70 ring-1 ring-white/10">
+              猜对正确率 <span className="ml-1 font-semibold text-white">{acc}%</span>
             </div>
           </div>
         </Card>
@@ -173,10 +197,47 @@ export function HistoryDetailPage() {
                         {rec.snapshot.sentence}
                       </div>
                     ) : null}
+                    {rec.snapshot?.context?.contextZh ? (
+                      <div className="mt-2 rounded bg-white/5 p-2 text-sm text-white/70">
+                        <div className="mb-1 text-xs text-white/40">上下文说明：</div>
+                        <div className="line-clamp-2">{rec.snapshot.context.contextZh}</div>
+                      </div>
+                    ) : null}
                     {rec.snapshot?.article?.articleZh ? (
                       <div className="mt-2 rounded bg-white/5 p-2 text-sm text-white/70">
                         <div className="mb-1 text-xs text-white/40">短文（部分）：</div>
                         <div className="line-clamp-2">{rec.snapshot.article.articleZh}</div>
+                      </div>
+                    ) : null}
+                    {Array.isArray(rec.attempts) && rec.attempts.length > 0 ? (
+                      <div className="mt-3 rounded bg-white/5 p-2 text-sm text-white/80 ring-1 ring-white/10">
+                        <div className="mb-2 text-xs font-semibold text-white/60">猜测记录</div>
+                        <div className="space-y-1">
+                          {rec.attempts.map((a, j) => (
+                            <div key={j} className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white/70 ring-1 ring-white/10">
+                                    阶段 {a.attemptNo}
+                                  </span>
+                                  <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${a.judge?.isCorrect ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                                    {a.judge?.isCorrect ? '正确' : '未通过'}
+                                  </span>
+                                  {typeof a.judge?.score === 'number' ? (
+                                    <span className="text-[10px] text-white/50">分数 {a.judge.score}</span>
+                                  ) : null}
+                                </div>
+                                <div className="mt-1 text-xs text-white/70">{a.userMeaningZh}</div>
+                                {a.judge?.reason ? (
+                                  <div className="mt-1 text-[11px] text-white/50">评判：{a.judge.reason}</div>
+                                ) : null}
+                                {a.judge?.correctMeaningZh ? (
+                                  <div className="mt-1 text-[11px] text-white/50">参考：{a.judge.correctMeaningZh}</div>
+                                ) : null}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     ) : null}
                   </div>
@@ -189,4 +250,3 @@ export function HistoryDetailPage() {
     </div>
   )
 }
-

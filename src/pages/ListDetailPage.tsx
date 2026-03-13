@@ -39,6 +39,7 @@ export function ListDetailPage() {
   const [showDebug, setShowDebug] = useState(false)
   const [debugSample, setDebugSample] = useState<unknown[] | null>(null)
   const [importing, setImporting] = useState<{ processed: number; total: number } | null>(null)
+  const [deleting, setDeleting] = useState<{ processed: number; total: number; phase: 'items' | 'list' } | null>(null)
 
   const canSubmit = useMemo(() => term.trim().length > 0, [term])
   const bulkTerms = useMemo(() => {
@@ -129,34 +130,60 @@ export function ListDetailPage() {
             onClick={() => {
               const ok = window.confirm('删除这个词表？（包含条目与练习进度）')
               if (!ok) return
-              actions.deleteList(listId)
-              nav('/admin/lists')
+              if (deleting) return
+              setDeleting({ processed: 0, total: (items?.length ?? 0) + 1, phase: 'items' })
+              void actions
+                .deleteListWithProgress(listId, (p, t, phase) => {
+                  setDeleting({ processed: p, total: t, phase })
+                })
+                .then(() => {
+                  setDeleting(null)
+                  nav('/admin/lists')
+                })
+                .catch(() => {
+                  setDeleting(null)
+                })
             }}
+            disabled={Boolean(deleting)}
           >
-            删除
+            {deleting ? `删除中 ${deleting.processed}/${deleting.total}${deleting.phase === 'items' ? '（条目）' : '（词表）'}...` : '删除'}
           </Button>
         </div>
       </div>
 
       {teableStatus.kind === 'unconfigured' ? (
         <Card className="p-5">
-          <div className="text-sm font-semibold text-white">Teable 未配置</div>
-          <div className="mt-1 text-sm text-white/60">当前条目来自本地缓存（localStorage）</div>
+          <div className="text-sm font-semibold text白">Teable 未配置</div>
+          <div className="mt-1 text-sm text白/60">当前条目来自本地缓存（localStorage）</div>
         </Card>
       ) : teableStatus.kind === 'loading' ? (
         <Card className="p-5">
-          <div className="text-sm font-semibold text-white">正在从 Teable 读取条目…</div>
-          <div className="mt-1 text-sm text-white/60">WordLists 表数据拉取中</div>
+          <div className="text-sm font-semibold text白">正在从 Teable 读取条目…</div>
+          <div className="mt-1 text-sm text白/60">WordLists 表数据拉取中</div>
         </Card>
       ) : teableStatus.kind === 'ok' ? (
         <Card className="p-5">
-          <div className="text-sm font-semibold text-white">Teable 读取成功</div>
-          <div className="mt-1 text-sm text-white/60">远端该词表下共 {teableStatus.count} 条记录</div>
+          <div className="text-sm font-semibold text白">Teable 读取成功</div>
+          <div className="mt-1 text-sm text白/60">远端该词表下共 {teableStatus.count} 条记录</div>
         </Card>
       ) : teableStatus.kind === 'error' ? (
         <Card className="p-5">
           <div className="text-sm font-semibold text白">Teable 读取失败</div>
-          <div className="mt-1 text-sm text-white/60">{teableStatus.message}</div>
+          <div className="mt-1 text-sm text白/60">{teableStatus.message}</div>
+        </Card>
+      ) : null}
+      {deleting ? (
+        <Card className="p-5">
+          <div className="text-sm font-semibold text-white">正在删除</div>
+          <div className="mt-1 text-sm text-white/60">
+            进度 {deleting.processed}/{deleting.total}（{deleting.phase === 'items' ? '条目' : '词表'}）
+          </div>
+          <div className="mt-2 h-2 w-full rounded bg-white/10">
+            <div
+              className="h-2 rounded bg-white/60"
+              style={{ width: `${Math.min(100, Math.round((deleting.processed / Math.max(1, deleting.total)) * 100))}%` }}
+            />
+          </div>
         </Card>
       ) : null}
       {showDebug ? (

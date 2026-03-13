@@ -10,6 +10,7 @@ const modeLabel: Record<PracticeMode, string> = {
   fixed_sequence: '固定词表序列模式',
   ai_infinite: 'AI 无限词模式（暂不开放）',
   fixed_random: '固定词表随机模式',
+  fixed_random_unpracticed: '随机未练过（10）',
 }
 
 export function ModePage() {
@@ -50,8 +51,8 @@ export function ModePage() {
             <div className="mt-2 text-sm text-white/60">选择适合你的练习模式。</div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            {(['fixed_sequence', 'ai_infinite', 'fixed_random'] as PracticeMode[]).map((m) => {
+          <div className="grid gap-3 sm:grid-cols-4">
+            {(['fixed_sequence', 'ai_infinite', 'fixed_random', 'fixed_random_unpracticed'] as PracticeMode[]).map((m) => {
               const enabled = m !== 'ai_infinite'
               const active = selectedMode === m
               return (
@@ -60,19 +61,28 @@ export function ModePage() {
                   type="button"
                   onClick={() => pickMode(m)}
                   className={cn(
-                    'text-left',
+                    'relative text-left',
                     'rounded-2xl border bg-white/5 p-4 ring-1 transition-all',
-                    active ? 'border-white/20 ring-white/20' : 'border-white/10 ring-white/10',
+                    active
+                      ? 'border-emerald-400/30 bg-emerald-500/10 ring-emerald-400/30 shadow-soft scale-[1.01]'
+                      : 'border-white/10 ring-white/10 hover:bg-white/10',
                     enabled ? 'hover:bg-white/10' : 'opacity-60 cursor-not-allowed',
                   )}
                   disabled={!enabled}
                 >
                   <div className="text-xs font-semibold tracking-wide text-white/60">模式</div>
                   <div className="mt-2 text-sm font-semibold text-white">{modeLabel[m]}</div>
+                  {active ? (
+                    <div className="absolute right-3 top-3 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-medium text-emerald-200 ring-1 ring-emerald-500/30">
+                      已选择
+                    </div>
+                  ) : null}
                   {m === 'fixed_sequence' ? (
                     <div className="mt-2 text-xs text-white/55">按词表当前顺序，从第 1 条练到最后 1 条</div>
                   ) : m === 'fixed_random' ? (
                     <div className="mt-2 text-xs text-white/55">每次随机抽取 10 个词进行练习</div>
+                  ) : m === 'fixed_random_unpracticed' ? (
+                    <div className="mt-2 text-xs text-white/55">随机抽取 10 个未练过的词进行练习</div>
                   ) : (
                     <div className="mt-2 text-xs text-white/45">暂不开放</div>
                   )}
@@ -151,13 +161,20 @@ export function ModePage() {
                 type="button"
                 onClick={() => actions.setAiProvider(p)}
                 className={cn(
-                  'text-left',
+                  'relative text-left',
                   'rounded-2xl border bg-white/5 p-4 ring-1 transition-all',
-                  active ? 'border-white/20 ring-white/20' : 'border-white/10 ring-white/10 hover:bg-white/10',
+                  active
+                    ? 'border-indigo-400/30 bg-indigo-500/10 ring-indigo-400/30 shadow-soft scale-[1.01]'
+                    : 'border-white/10 ring-white/10 hover:bg-white/10',
                 )}
               >
                 <div className="text-xs font-semibold tracking-wide text-white/60">模型</div>
                 <div className="mt-2 text-sm font-semibold text-white">{p === 'tal' ? 'Tal AI（内网）' : 'Volces Ark（公网）'}</div>
+                {active ? (
+                  <div className="absolute right-3 top-3 rounded-full bg-indigo-500/20 px-2 py-0.5 text-[10px] font-medium text-indigo-200 ring-1 ring-indigo-500/30">
+                    已选择
+                  </div>
+                ) : null}
               </button>
             )
           })}
@@ -170,7 +187,9 @@ export function ModePage() {
           <div className="mt-1 text-sm text-white/60">
             {selectedMode === 'fixed_random'
               ? '将随机抽取 10 个词进行练习。'
-              : '将从第 1 题开始，直到最后 1 题结束。'}
+              : selectedMode === 'fixed_random_unpracticed'
+                ? '随机抽取 10 个未练过的词进行练习。'
+                : '将从第 1 题开始，直到最后 1 题结束。'}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">

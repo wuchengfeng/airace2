@@ -6,7 +6,7 @@ export function AdminLayout() {
   return (
     <BaseLayout
       homeTo="/admin/lists"
-      title="Ai Hackathon Admin"
+      title="AI猜学外语 admin"
       nav={[
         { to: '/admin/lists', label: '词表管理' },
         { to: '/admin/prompts', label: '提示词' },

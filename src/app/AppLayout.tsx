@@ -24,7 +24,7 @@ export function AppLayout() {
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-white text-slate-900 shadow-soft">
               A
             </span>
-            <span className="text-base font-semibold tracking-tight text-white">Airace</span>
+            <span className="text-base font-semibold tracking-tight text-white">AI猜学外语</span>
           </Link>
           <nav className="flex items-center gap-2">
             <NavLink to="/lists" className={linkClass}>

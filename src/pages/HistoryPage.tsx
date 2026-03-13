@@ -10,6 +10,7 @@ const modeLabel: Record<PracticeMode, string> = {
   fixed_sequence: '固定词表序列模式',
   ai_infinite: 'AI 无限词模式',
   fixed_random: '固定词表随机模式',
+  fixed_random_unpracticed: '随机未练过（10）',
 }
 
 function formatDurationMs(ms: number) {
@@ -102,6 +103,9 @@ export function HistoryPage() {
         {history.map((h) => {
           const correctTotal = h.correctByAttempt[1] + h.correctByAttempt[2] + h.correctByAttempt[3]
           const acc = h.total > 0 ? Math.round((correctTotal / h.total) * 100) : 0
+          const rate1 = h.total > 0 ? Math.round((h.correctByAttempt[1] / h.total) * 100) : 0
+          const rate2 = h.total > 0 ? Math.round((h.correctByAttempt[2] / h.total) * 100) : 0
+          const rate3 = h.total > 0 ? Math.round((h.correctByAttempt[3] / h.total) * 100) : 0
           const duration =
             typeof h.endedAt === 'number' && typeof h.startedAt === 'number' ? formatDurationMs(h.endedAt - h.startedAt) : undefined
           return (
@@ -120,6 +124,12 @@ export function HistoryPage() {
                 <div className="rounded-xl bg-white/10 px-3 py-2 text-center ring-1 ring-white/10">
                   <div className="text-xs font-semibold tracking-wide text-white/60">正确率</div>
                   <div className="mt-1 text-lg font-semibold tracking-tight text-white">{acc}%</div>
+                  <div className="mt-2 flex items-center justify-center gap-1">
+                    <div className="rounded px-1.5 py-0.5 text-[10px] text-white/80 ring-1 ring-white/15">一 {rate1}%</div>
+                    <div className="rounded px-1.5 py-0.5 text-[10px] text-white/80 ring-1 ring-white/15">二 {rate2}%</div>
+                    <div className="rounded px-1.5 py-0.5 text-[10px] text-white/80 ring-1 ring-white/15">三 {rate3}%</div>
+                    <div className="rounded px-1.5 py-0.5 text-[10px] text-white/80 ring-1 ring-white/15">猜对 {acc}%</div>
+                  </div>
                 </div>
                 <Link to={`/app/history/${h.id}`}>
                   <Button size="sm" variant="secondary">
@@ -158,4 +168,3 @@ export function HistoryPage() {
     </div>
   )
 }
-

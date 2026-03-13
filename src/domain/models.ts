@@ -59,7 +59,7 @@ export type CorrectEntry = {
   }
 }
 
-export type PracticeMode = 'fixed_sequence' | 'ai_infinite' | 'fixed_random'
+export type PracticeMode = 'fixed_sequence' | 'ai_infinite' | 'fixed_random' | 'fixed_random_unpracticed'
 
 export type PromptRole = 'system' | 'user' | 'assistant'
 
@@ -86,6 +86,18 @@ export type PracticeRecord = {
   attemptCount: number // 1, 2, 3, or 4 (4 means failed)
   isCorrect: boolean
   userMeaningZh?: string
+  attempts?: {
+    attemptNo: number
+    userMeaningZh: string
+    judge?: {
+      isCorrect: boolean
+      score?: number
+      confidence?: number
+      reason?: string
+      correctMeaningZh?: string
+      acceptAlternatives?: string[]
+    }
+  }[]
   snapshot?: ListItemMaterial
 }
 

@@ -42,6 +42,27 @@ export type Action =
   | { type: 'practice/next'; payload: { listId: string } }
   | { type: 'practice/deleteSession'; payload: { listId: string } }
   | {
+      type: 'practice/attempt'
+      payload: {
+        listId: string
+        attemptNo: 1 | 2 | 3 | 4
+        record: {
+          itemId: string
+          term: string
+          userMeaningZh?: string
+          judge?: {
+            isCorrect: boolean
+            score?: number
+            confidence?: number
+            reason?: string
+            correctMeaningZh?: string
+            acceptAlternatives?: string[]
+          }
+          snapshot?: ListItemMaterial
+        }
+      }
+    }
+  | {
       type: 'practice/correct'
       payload: {
         listId: string
@@ -180,20 +201,64 @@ export function reducer(state: AppStateV1, action: Action): AppStateV1 {
     case 'practice/deleteSession': {
       return deletePracticeSession(state, action.payload.listId)
     }
+    case 'practice/attempt': {
+      const progress = next.practiceByListId[action.payload.listId]
+      if (!progress) return state
+      const run = ensureRun(progress)
+      run.records = run.records ?? []
+      const rec = run.records.find((r) => r.itemId === action.payload.record.itemId)
+      const attemptEntry = {
+        attemptNo: action.payload.attemptNo,
+        userMeaningZh: action.payload.record.userMeaningZh ?? '',
+        judge: action.payload.record.judge,
+      }
+      if (!rec) {
+        run.records.push({
+          itemId: action.payload.record.itemId,
+          term: action.payload.record.term,
+          attemptCount: action.payload.attemptNo,
+          isCorrect: Boolean(action.payload.record.judge?.isCorrect),
+          userMeaningZh: action.payload.record.userMeaningZh,
+          attempts: [attemptEntry],
+          snapshot: action.payload.record.snapshot,
+        })
+      } else {
+        rec.attemptCount = action.payload.attemptNo
+        rec.isCorrect = Boolean(action.payload.record.judge?.isCorrect)
+        rec.userMeaningZh = action.payload.record.userMeaningZh
+        rec.attempts = rec.attempts ?? []
+        rec.attempts.push(attemptEntry)
+        if (!rec.snapshot && action.payload.record.snapshot) {
+          rec.snapshot = action.payload.record.snapshot
+        }
+      }
+      progress.updatedAt = Date.now()
+      return next
+    }
     case 'practice/correct': {
       const progress = next.practiceByListId[action.payload.listId]
       if (!progress) return state
       const run = ensureRun(progress)
       run.correctByAttempt[action.payload.attemptNo] += 1
       run.records = run.records ?? []
-      run.records.push({
-        itemId: action.payload.record.itemId,
-        term: action.payload.record.term,
-        attemptCount: action.payload.attemptNo,
-        isCorrect: true,
-        userMeaningZh: action.payload.record.userMeaningZh,
-        snapshot: action.payload.record.snapshot,
-      })
+      const rec = run.records.find((r) => r.itemId === action.payload.record.itemId)
+      if (rec) {
+        rec.attemptCount = action.payload.attemptNo
+        rec.isCorrect = true
+        rec.userMeaningZh = action.payload.record.userMeaningZh
+        if (!rec.snapshot && action.payload.record.snapshot) {
+          rec.snapshot = action.payload.record.snapshot
+        }
+      } else {
+        run.records.push({
+          itemId: action.payload.record.itemId,
+          term: action.payload.record.term,
+          attemptCount: action.payload.attemptNo,
+          isCorrect: true,
+          userMeaningZh: action.payload.record.userMeaningZh,
+          snapshot: action.payload.record.snapshot,
+        })
+      }
       progress.updatedAt = Date.now()
       return next
     }
@@ -203,14 +268,22 @@ export function reducer(state: AppStateV1, action: Action): AppStateV1 {
       const run = ensureRun(progress)
       run.finalWrongCount += 1
       run.records = run.records ?? []
-      run.records.push({
-        itemId: action.payload.record.itemId,
-        term: action.payload.record.term,
-        attemptCount: 4,
-        isCorrect: false,
-        userMeaningZh: action.payload.record.userMeaningZh,
-        snapshot: action.payload.record.snapshot,
-      })
+      const rec = run.records.find((r) => r.itemId === action.payload.record.itemId)
+      if (rec) {
+        rec.attemptCount = 4
+        rec.isCorrect = false
+        rec.userMeaningZh = action.payload.record.userMeaningZh
+        rec.snapshot = action.payload.record.snapshot
+      } else {
+        run.records.push({
+          itemId: action.payload.record.itemId,
+          term: action.payload.record.term,
+          attemptCount: 4,
+          isCorrect: false,
+          userMeaningZh: action.payload.record.userMeaningZh,
+          snapshot: action.payload.record.snapshot,
+        })
+      }
       progress.updatedAt = Date.now()
       return next
     }

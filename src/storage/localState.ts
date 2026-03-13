@@ -115,7 +115,13 @@ export function loadState(): AppStateV1 {
       const base = createEmptyState()
       const obj = parsed as Record<string, unknown>
       const settings = typeof obj.settings === 'object' && obj.settings !== null ? (obj.settings as Record<string, unknown>) : {}
-      const mode = settings.mode === 'fixed_sequence' || settings.mode === 'ai_infinite' || settings.mode === 'fixed_random' ? (settings.mode as PracticeMode) : base.settings?.mode
+      const mode =
+        settings.mode === 'fixed_sequence' ||
+        settings.mode === 'ai_infinite' ||
+        settings.mode === 'fixed_random' ||
+        settings.mode === 'fixed_random_unpracticed'
+          ? (settings.mode as PracticeMode)
+          : base.settings?.mode
       const practiceHistoryRaw = obj.practiceHistory
       const aiPromptsRaw = obj.aiPrompts
       const upgradedPrompts = upgradeAiPrompts(aiPromptsRaw as AppStateV1['aiPrompts'] | undefined)
@@ -254,6 +260,10 @@ async function teableJson<T>(env: TeableEnv, input: string, init?: RequestInit):
   return (await res.json()) as T
 }
 
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms))
+}
+
 function parseTeableWordTableName(fields: unknown): string | undefined {
   if (!fields || typeof fields !== 'object') return undefined
   const obj = fields as Record<string, unknown>
@@ -319,9 +329,24 @@ export async function renameTeableWordTable(env: TeableEnv, recordId: string, ta
 
 export async function deleteTeableWordTables(env: TeableEnv, recordIds: string[]): Promise<void> {
   const tableId = getWordTableTableId(env)
-  const params = new URLSearchParams()
-  for (const id of recordIds) params.append('recordIds[]', id)
-  await teableJson(env, `/api/table/${tableId}/record?${params.toString()}`, { method: 'DELETE' })
+  const size = 50
+  for (let i = 0; i < recordIds.length; i += size) {
+    const chunk = recordIds.slice(i, i + size)
+    let attempts = 0
+    while (attempts < 3) {
+      attempts += 1
+      try {
+        const params = new URLSearchParams()
+        for (const id of chunk) params.append('recordIds[]', id)
+        await teableJson(env, `/api/table/${tableId}/record?${params.toString()}`, { method: 'DELETE' })
+        break
+      } catch (e) {
+        if (attempts >= 3) throw e
+        await sleep(500 * attempts)
+      }
+    }
+    if (i + size < recordIds.length) await sleep(300)
+  }
 }
 
 export type TeableWordRecord = {
@@ -586,9 +611,24 @@ export async function updateTeableWord(env: TeableEnv, recordId: string, word: s
 
 export async function deleteTeableWords(env: TeableEnv, recordIds: string[]): Promise<void> {
   const tableId = getWordListsTableId(env)
-  const params = new URLSearchParams()
-  for (const id of recordIds) params.append('recordIds[]', id)
-  await teableJson(env, `/api/table/${tableId}/record?${params.toString()}`, { method: 'DELETE' })
+  const size = 50
+  for (let i = 0; i < recordIds.length; i += size) {
+    const chunk = recordIds.slice(i, i + size)
+    let attempts = 0
+    while (attempts < 3) {
+      attempts += 1
+      try {
+        const params = new URLSearchParams()
+        for (const id of chunk) params.append('recordIds[]', id)
+        await teableJson(env, `/api/table/${tableId}/record?${params.toString()}`, { method: 'DELETE' })
+        break
+      } catch (e) {
+        if (attempts >= 3) throw e
+        await sleep(500 * attempts)
+      }
+    }
+    if (i + size < recordIds.length) await sleep(300)
+  }
 }
 
 export function mergeWordTablesFromTeable(state: AppStateV1, remote: TeableWordTableRecord[]): AppStateV1 {
@@ -636,6 +676,35 @@ export function ensurePracticeOrder(
       const rng = createSeededRng(Date.now())
       shuffleInPlace(order, rng)
       order = order.slice(0, 10)
+    } else if (mode === 'fixed_random_unpracticed') {
+      const practiced = new Set<string>()
+      const history = state.practiceHistory ?? []
+      for (const h of history) {
+        if (h.listId !== listId) continue
+        const recs = h.records ?? []
+        for (const r of recs) practiced.add(r.itemId)
+      }
+      const currentRun = state.practiceByListId[listId]?.run
+      if (currentRun?.records) {
+        for (const r of currentRun.records) practiced.add(r.itemId)
+      }
+      const corrects = state.corrects ?? []
+      for (const c of corrects) {
+        if (c.listId === listId) practiced.add(c.itemId)
+      }
+      const mistakes = state.mistakes ?? []
+      for (const m of mistakes) {
+        if (m.listId === listId) practiced.add(m.itemId)
+      }
+      let candidates = order.filter((id) => !practiced.has(id))
+      if (candidates.length === 0) {
+        const rng = createSeededRng(Date.now())
+        shuffleInPlace(order, rng)
+        candidates = order
+      }
+      const rng = createSeededRng(Date.now())
+      shuffleInPlace(candidates, rng)
+      order = candidates.slice(0, 10)
     }
 
     state.practiceByListId[listId] = { order, cursor: 0, updatedAt: Date.now(), run: createRun(order.length), mode }

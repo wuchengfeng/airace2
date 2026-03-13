@@ -6,7 +6,7 @@ export function UserLayout() {
   return (
     <BaseLayout
       homeTo="/app"
-      title="猜记单词-Ai Hackathon"
+      title="AI猜学外语"
       nav={[
         { to: '/app', label: '模式' },
         { to: '/app/mistakes', label: '错猜本' },

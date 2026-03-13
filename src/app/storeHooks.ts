@@ -89,6 +89,40 @@ export function useAppActions() {
     },
     [dispatch],
   )
+  const deleteListWithProgress = useCallback(
+    (listId: string, onProgress?: (processed: number, total: number, phase: 'items' | 'list') => void) => {
+      const env = getTeableEnv()
+      if (!env || !env.wordTableTableId || !listId.startsWith('rec')) {
+        dispatch({ type: 'lists/delete', payload: { listId } })
+        onProgress?.(1, 1, 'list')
+        return Promise.resolve()
+      }
+      return (async () => {
+        const items = await fetchTeableWords(env, listId)
+        const total = items.length + 1
+        let processed = 0
+        const BATCH_SIZE = 50
+        for (let i = 0; i < items.length; i += BATCH_SIZE) {
+          const batch = items.slice(i, i + BATCH_SIZE)
+          const ids = batch.map((it) => it.id)
+          await deleteTeableWords(env, ids)
+          processed += batch.length
+          onProgress?.(processed, total, 'items')
+          if (i + BATCH_SIZE < items.length) await new Promise((r) => setTimeout(r, 300))
+        }
+        await deleteTeableWordTables(env, [listId])
+        processed = total
+        onProgress?.(processed, total, 'list')
+        dispatch({ type: 'lists/delete', payload: { listId } })
+      })().catch((e) => {
+        console.error(e)
+        const msg = e instanceof Error ? e.message : String(e)
+        window.alert(`删除失败：${msg}`)
+        throw e
+      })
+    },
+    [dispatch],
+  )
   const upsertItem = useCallback(
     (listId: string, item: ListItem) => {
       const env = getTeableEnv()
@@ -227,6 +261,27 @@ export function useAppActions() {
     ) => dispatch({ type: 'practice/correct', payload: { listId, attemptNo, record } }),
     [dispatch],
   )
+  const markPracticeAttempt = useCallback(
+    (
+      listId: string,
+      attemptNo: 1 | 2 | 3 | 4,
+      record: {
+        itemId: string
+        term: string
+        userMeaningZh?: string
+        judge?: {
+          isCorrect: boolean
+          score?: number
+          confidence?: number
+          reason?: string
+          correctMeaningZh?: string
+          acceptAlternatives?: string[]
+        }
+        snapshot?: ListItemMaterial
+      },
+    ) => dispatch({ type: 'practice/attempt', payload: { listId, attemptNo, record } }),
+    [dispatch],
+  )
   const markPracticeFinalWrong = useCallback(
     (
       listId: string,
@@ -348,6 +403,7 @@ export function useAppActions() {
       createList,
       renameList,
       deleteList,
+      deleteListWithProgress,
       syncItemsFromTeable,
       upsertItem,
       bulkCreateItems,
@@ -355,6 +411,7 @@ export function useAppActions() {
       ensurePractice,
       nextPractice,
       markPracticeCorrect,
+      markPracticeAttempt,
       markPracticeFinalWrong,
       setItemMaterial,
       recordMistake,
@@ -377,10 +434,12 @@ export function useAppActions() {
       createList,
       deleteItem,
       deleteList,
+      deleteListWithProgress,
       deleteHistoryRun,
       deletePracticeSession,
       ensurePractice,
       markPracticeCorrect,
+      markPracticeAttempt,
       markPracticeFinalWrong,
       nextPractice,
       recordMistake,

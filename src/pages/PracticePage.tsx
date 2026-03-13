@@ -450,6 +450,17 @@ export function PracticePage() {
       })
       setGeneratingStep(null)
       setLastJudge(judge)
+      actions.markPracticeAttempt(safeListId, attemptNo, {
+        itemId: item.id,
+        term: item.term,
+        userMeaningZh: meaning,
+        judge,
+        snapshot: {
+          ...materialBase,
+          runId: currentRunId,
+          sentence: ensuredSentence,
+        },
+      })
 
       if (judge.isCorrect) {
         actions.markPracticeCorrect(safeListId, attemptNo, {
